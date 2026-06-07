@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# スライドコメントジェネレーター
 
-## Getting Started
+既存のスライド（.pptx）に、ニコニコ動画風に右→左へ流れるコメントを乗せるWebアプリ。
 
-First, run the development server:
+**本番:** https://nico-comment-app.vercel.app
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## できること
+
+- pptx をアップロード（ブラウザ内で解析、スライド枚数・サイズを取得）
+- コメントを流すスライドを番号指定（`all` / `1,3,5-7`）
+- コメントを入力（**色も指定可**、まとめ貼り付けも対応）
+- 流れるスピード・出現間隔・行数・文字サイズを調整、Canvasでライブプレビュー
+- 「生成」でコメント入り pptx をダウンロード
+
+## 仕組み
+
+コメントが流れる**透過アニメGIF**を生成し、指定スライドの上に全面で重ねる。
+PowerPoint / Keynote はスライドショー時にアニメGIFを自動再生するため、確実に動く
+（ネイティブのモーションパスはアプリ依存で再生が不安定なため不採用）。
+
+```
+ブラウザ(Next.js / Vercel)
+  └ JSZipで解析・Canvasでライブプレビュー
+  └ API Route ──[Vercel OIDCでIAMロールをAssume / 長期キーなし]── AWS Lambda(東京)
+        Pillowでコメント流れGIF生成 → python-pptxで全面注入 → S3
+  └ 署名付きURLでダウンロード（S3は24h自動削除）
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **フロント:** Next.js (App Router) on Vercel
+- **バックエンド:** Lambda（コンテナ / Pillow + python-pptx + Noto Sans JP）
+- **認証:** Vercel OIDC Federation（キーレス、`@vercel/oidc-aws-credentials-provider`）
+- **ストレージ:** S3（入力/出力、ライフサイクルで24時間後に自動削除）
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 制約
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+流れるコメント（アニメGIF）を再生できるのは **PowerPoint / Keynote** のみ。
+Googleスライドは静止画扱い、Canvaも再生は不確実。
+Canva/Googleで作った資料も「pptxエクスポート → 本アプリ → PowerPoint/Keynoteで開く」なら利用可。
 
-## Learn More
+## ローカル開発
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+npm run dev   # http://localhost:3000
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+ローカルではAWSクレデンシャル（`aws login` など）の既定チェーンでLambdaを呼ぶ。
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Lambdaのデプロイ（参考）
 
-## Deploy on Vercel
+```bash
+cd lambda
+docker build --platform linux/arm64 -t <ECR>/nico-comment-app:latest .
+docker push <ECR>/nico-comment-app:latest
+aws lambda update-function-code --function-name nico-comment-app --image-uri <ECR>/nico-comment-app:latest
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+環境変数: Lambda側 `BUCKET`、Vercel側 `AWS_ROLE_ARN`。
