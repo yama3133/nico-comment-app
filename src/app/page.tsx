@@ -4,8 +4,9 @@ import { useState } from "react";
 import Preview from "@/components/Preview";
 import CommentEditor from "@/components/CommentEditor";
 import { parsePptx, parseSlideSpec } from "@/lib/pptx";
-import { processPptx } from "@/lib/api";
+import { processPptx, type ProgressKey } from "@/lib/api";
 import { pickColor } from "@/lib/palette";
+import { useI18n } from "@/lib/i18n";
 import {
   type CommentItem,
   type PptxInfo,
@@ -16,20 +17,21 @@ import {
 const SAMPLE = ["888", "キタ━━━!!", "わかる", "草", "天才", "神LT"];
 
 export default function Home() {
+  const { t, lang } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [info, setInfo] = useState<PptxInfo | null>(null);
   const [slideSpec, setSlideSpec] = useState("all");
   const [comments, setComments] = useState<CommentItem[]>(
-    SAMPLE.map((t, i) => ({
+    SAMPLE.map((text, i) => ({
       id: Math.random().toString(36).slice(2, 10),
-      text: t,
+      text,
       color: pickColor(i),
     })),
   );
   const [settings, setSettings] = useState<FlowSettings>(DEFAULT_SETTINGS);
   const [parseError, setParseError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [progress, setProgress] = useState("");
+  const [progress, setProgress] = useState<ProgressKey | "">("");
   const [downloadUrl, setDownloadUrl] = useState("");
   const [genError, setGenError] = useState("");
 
@@ -39,7 +41,7 @@ export default function Home() {
     setDownloadUrl("");
     setGenError("");
     if (!f.name.toLowerCase().endsWith(".pptx")) {
-      setParseError("PowerPoint形式(.pptx)を選んでください。");
+      setParseError(t("errNotPptx"));
       return;
     }
     try {
@@ -62,11 +64,11 @@ export default function Home() {
     if (!file || !info) return;
     const validComments = comments.filter((c) => c.text.trim() !== "");
     if (validComments.length === 0) {
-      setGenError("コメントを1件以上入力してください。");
+      setGenError(t("errNoComment"));
       return;
     }
     if (targetSlides.length === 0) {
-      setGenError("対象スライドを指定してください。");
+      setGenError(t("errNoSlide"));
       return;
     }
     setBusy(true);
@@ -92,23 +94,24 @@ export default function Home() {
     <main className="mx-auto min-h-screen max-w-5xl px-4 py-8 text-white">
       <header className="mb-8">
         <h1 className="text-3xl font-black tracking-tight">
-          スライド<span className="text-pink-400">コメント</span>ジェネレーター
+          {lang === "ja" ? (
+            <>
+              スライド<span className="text-pink-400">コメント</span>
+              ジェネレーター
+            </>
+          ) : (
+            <>
+              Slide <span className="text-pink-400">Comment</span> Generator
+            </>
+          )}
         </h1>
-        <p className="mt-2 text-sm text-white/60">
-          既存のスライドに、ニコニコ動画風に流れるコメントを乗せます。アップロード →
-          スライド指定 → コメント入力で完成。
-        </p>
-        <p className="mt-1 text-xs text-amber-300/80">
-          ※ 流れるコメント（アニメGIF）を再生できるのは PowerPoint と Keynote
-          です。Googleスライド/Canvaは静止画になります。
-        </p>
+        <p className="mt-2 text-sm text-white/60">{t("subtitle")}</p>
+        <p className="mt-1 text-xs text-amber-300/80">{t("constraint")}</p>
       </header>
 
       {/* STEP 1: アップロード */}
       <section className="mb-6">
-        <h2 className="mb-2 text-sm font-bold text-white/80">
-          1. スライドをアップロード（.pptx）
-        </h2>
+        <h2 className="mb-2 text-sm font-bold text-white/80">{t("step1")}</h2>
         <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-white/20 bg-white/5 px-6 py-10 text-center hover:border-pink-400/60">
           <input
             type="file"
@@ -117,13 +120,15 @@ export default function Home() {
             onChange={(e) => onFile(e.target.files?.[0])}
           />
           <span className="text-sm text-white/70">
-            {file ? file.name : "クリックして.pptxを選択"}
+            {file ? file.name : t("uploadCta")}
           </span>
           {info && (
             <span className="mt-1 text-xs text-white/50">
-              {info.slideCount}枚 /{" "}
+              {info.slideCount}
+              {t("slidesUnit")} /{" "}
               {Math.round((info.widthEmu / 914400) * 10) / 10}×
-              {Math.round((info.heightEmu / 914400) * 10) / 10}インチ
+              {Math.round((info.heightEmu / 914400) * 10) / 10}
+              {t("inch")}
             </span>
           )}
         </label>
@@ -136,7 +141,7 @@ export default function Home() {
           <div className="space-y-6">
             <section>
               <h2 className="mb-2 text-sm font-bold text-white/80">
-                2. コメントを流すスライド
+                {t("step2")}
               </h2>
               <input
                 type="text"
@@ -146,57 +151,57 @@ export default function Home() {
                 className="w-full rounded-md border border-white/15 bg-black/30 px-3 py-2 text-sm outline-none focus:border-pink-400"
               />
               <p className="mt-1 text-xs text-white/50">
-                対象:{" "}
-                {targetSlides.length > 0 ? targetSlides.join(", ") : "（なし）"}
+                {t("target")}
+                {targetSlides.length > 0 ? targetSlides.join(", ") : t("none")}
               </p>
             </section>
 
             <section>
               <h2 className="mb-2 text-sm font-bold text-white/80">
-                3. コメント（色も指定可）
+                {t("step3")}
               </h2>
               <CommentEditor comments={comments} onChange={setComments} />
             </section>
 
             <section>
               <h2 className="mb-2 text-sm font-bold text-white/80">
-                4. 流れ方の調整
+                {t("step4")}
               </h2>
               <div className="space-y-3 text-sm">
                 <Slider
-                  label="スピード"
+                  label={t("speed")}
                   value={settings.speed}
                   min={80}
                   max={500}
                   step={10}
-                  unit="px/秒"
+                  unit={t("speedUnit")}
                   onChange={(v) => setSettings({ ...settings, speed: v })}
                 />
                 <Slider
-                  label="出現間隔"
+                  label={t("interval")}
                   value={settings.interval}
                   min={0.1}
                   max={1.5}
                   step={0.05}
-                  unit="秒"
+                  unit={t("secUnit")}
                   onChange={(v) => setSettings({ ...settings, interval: v })}
                 />
                 <Slider
-                  label="行数"
+                  label={t("rows")}
                   value={settings.rows}
                   min={3}
                   max={10}
                   step={1}
-                  unit="行"
+                  unit={t("rowsUnit")}
                   onChange={(v) => setSettings({ ...settings, rows: v })}
                 />
                 <Slider
-                  label="文字サイズ"
+                  label={t("fontSize")}
                   value={settings.fontSize}
                   min={16}
                   max={48}
                   step={1}
-                  unit="px"
+                  unit={t("pxUnit")}
                   onChange={(v) => setSettings({ ...settings, fontSize: v })}
                 />
               </div>
@@ -207,7 +212,7 @@ export default function Home() {
           <div>
             <section className="md:sticky md:top-6">
               <h2 className="mb-2 text-sm font-bold text-white/80">
-                プレビュー（流れ方の確認）
+                {t("preview")}
               </h2>
               <Preview comments={comments} settings={settings} />
 
@@ -216,7 +221,9 @@ export default function Home() {
                 disabled={busy}
                 className="mt-4 w-full rounded-lg bg-pink-500 px-4 py-3 font-bold text-white hover:bg-pink-400 disabled:opacity-50"
               >
-                {busy ? `処理中… ${progress}` : "コメント入りpptxを生成"}
+                {busy
+                  ? `${t("processing")}${progress ? t(progress) : ""}`
+                  : t("generate")}
               </button>
 
               {genError && <p className="mt-2 text-sm text-red-400">{genError}</p>}
@@ -225,7 +232,7 @@ export default function Home() {
                   href={downloadUrl}
                   className="mt-3 block rounded-lg bg-emerald-500 px-4 py-3 text-center font-bold text-white hover:bg-emerald-400"
                 >
-                  ⬇ 生成されたpptxをダウンロード
+                  {t("download")}
                 </a>
               )}
             </section>
@@ -233,8 +240,14 @@ export default function Home() {
         </div>
       )}
 
-      <footer className="mt-12 border-t border-white/10 pt-4 text-xs text-white/40">
-        スライドの中身はサーバーに一時保存され、24時間後に自動削除されます。
+      <footer className="mt-12 space-y-2 border-t border-white/10 pt-4 text-xs text-white/40">
+        <p>{t("footerDelete")}</p>
+        <p>
+          <a href="/notice" className="text-pink-400/80 hover:underline">
+            {t("noticeLink")}
+          </a>
+          {t("footerNotice")}
+        </p>
       </footer>
     </main>
   );

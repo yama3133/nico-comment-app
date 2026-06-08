@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { CommentItem, FlowSettings } from "@/lib/types";
 import { toCss } from "@/lib/palette";
+import { useI18n } from "@/lib/i18n";
 
 const W = 960;
 const H = 540;
@@ -17,6 +18,7 @@ export default function Preview({ comments, settings }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const startRef = useRef<number>(0);
+  const { t: tr } = useI18n();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -52,9 +54,9 @@ export default function Preview({ comments, settings }: Props) {
 
       if (items.length === 0) {
         ctx.fillStyle = "#555";
-        ctx.font = "bold 28px sans-serif";
+        ctx.font = "bold 24px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("コメントを入力するとここで流れます", W / 2, H / 2);
+        ctx.fillText(tr("previewEmpty"), W / 2, H / 2);
         ctx.textAlign = "left";
       } else {
         ctx.font = `bold ${fontSize}px sans-serif`;
@@ -77,7 +79,7 @@ export default function Preview({ comments, settings }: Props) {
     rafRef.current = requestAnimationFrame(draw);
 
     return () => cancelAnimationFrame(rafRef.current);
-  }, [comments, settings]);
+  }, [comments, settings, tr]);
 
   return (
     <canvas

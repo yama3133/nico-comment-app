@@ -1,13 +1,13 @@
-// ニコニコ動画風の定番カラーパレット（#なし6桁）
-export const PALETTE: { name: string; hex: string }[] = [
-  { name: "白", hex: "FFFFFF" },
-  { name: "黄", hex: "FFFF00" },
-  { name: "赤", hex: "FF6666" },
-  { name: "ピンク", hex: "FF88FF" },
-  { name: "シアン", hex: "88FFFF" },
-  { name: "緑", hex: "88FF88" },
-  { name: "オレンジ", hex: "FFAA44" },
-  { name: "紫", hex: "CC99FF" },
+// ニコニコ動画風の定番カラーパレット（#なし6桁）。nameKeyはi18n辞書のキー。
+export const PALETTE: { nameKey: string; hex: string }[] = [
+  { nameKey: "cWhite", hex: "FFFFFF" },
+  { nameKey: "cYellow", hex: "FFFF00" },
+  { nameKey: "cRed", hex: "FF6666" },
+  { nameKey: "cPink", hex: "FF88FF" },
+  { nameKey: "cCyan", hex: "88FFFF" },
+  { nameKey: "cGreen", hex: "88FF88" },
+  { nameKey: "cOrange", hex: "FFAA44" },
+  { nameKey: "cPurple", hex: "CC99FF" },
 ];
 
 /** パレットから順番に色を割り当てる */

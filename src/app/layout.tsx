@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { I18nProvider } from "@/lib/i18n";
+import LangToggle from "@/components/LangToggle";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,7 +30,12 @@ export default function RootLayout({
       lang="ja"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-zinc-950">{children}</body>
+      <body className="flex min-h-full flex-col bg-zinc-950">
+        <I18nProvider>
+          <LangToggle />
+          {children}
+        </I18nProvider>
+      </body>
     </html>
   );
 }
